@@ -166,14 +166,27 @@ import os
 import re
 import sys
 import warnings
+import time
 
 try:
     # Try importing for Python 3
     # pylint: disable-msg=F0401
     # pylint: disable-msg=E0611
-    from urllib.request import HTTPCookieProcessor, Request, build_opener
+    # from urllib.request import HTTPCookieProcessor, Request, build_opener
     from urllib.parse import quote, unquote
-    from http.cookiejar import MozillaCookieJar
+    # from http.cookiejar import MozillaCookieJar
+    from selenium import webdriver
+    chromedriverPath = r"C:\Program Files (x86)\Google\Chrome\Application\chromedriver.exe"
+    userProfile = r"C:\Users\mingt\AppData\Local\Google\Chrome\User Data\Default"
+    chrome_options = webdriver.ChromeOptions()
+
+    chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--disable-gpu')
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument('--proxy-server=socks5://localhost:1254')
+    chrome_options.add_argument("start-maximized")
+    chrome_options.add_argument("user-data-dir={}".format(userProfile))
+    chrome = webdriver.Chrome(options=chrome_options, executable_path=chromedriverPath)
 except ImportError:
     # Fallback for Python 2
     from urllib2 import Request, build_opener, HTTPCookieProcessor
@@ -245,11 +258,11 @@ class ScholarConf(object):
 
     # USER_AGENT = 'Mozilla/5.0 (X11; U; FreeBSD i386; en-US; rv:1.9.2.9) Gecko/20100913 Firefox/3.6.9'
     # Let's update at this point (3/14):
-    USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64; rv:27.0) Gecko/20100101 Firefox/27.0'
+    # USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64; rv:27.0) Gecko/20100101 Firefox/27.0'
 
     # If set, we will use this file to read/save cookies to enable
     # cookie use across sessions.
-    COOKIE_JAR_FILE = None
+    # COOKIE_JAR_FILE = None
 
 class ScholarUtils(object):
     """A wrapper for various utensils that come in handy."""
@@ -942,20 +955,20 @@ class ScholarQuerier(object):
     def __init__(self):
         self.articles = []
         self.query = None
-        self.cjar = MozillaCookieJar()
+        # self.cjar = MozillaCookieJar()
 
         # If we have a cookie file, load it:
-        if ScholarConf.COOKIE_JAR_FILE and \
-           os.path.exists(ScholarConf.COOKIE_JAR_FILE):
-            try:
-                self.cjar.load(ScholarConf.COOKIE_JAR_FILE,
-                               ignore_discard=True)
-                ScholarUtils.log('info', 'loaded cookies file')
-            except Exception as msg:
-                ScholarUtils.log('warn', 'could not load cookies file: %s' % msg)
-                self.cjar = MozillaCookieJar() # Just to be safe
+        # if ScholarConf.COOKIE_JAR_FILE and \
+        #   os.path.exists(ScholarConf.COOKIE_JAR_FILE):
+        #    try:
+        #        self.cjar.load(ScholarConf.COOKIE_JAR_FILE,
+        #                       ignore_discard=True)
+        #        ScholarUtils.log('info', 'loaded cookies file')
+        #    except Exception as msg:
+        #        ScholarUtils.log('warn', 'could not load cookies file: %s' % msg)
+        #        self.cjar = MozillaCookieJar() # Just to be safe
 
-        self.opener = build_opener(HTTPCookieProcessor(self.cjar))
+        self.opener = chrome
         self.settings = None # Last settings object, if any
 
     def apply_settings(self, settings):
@@ -1089,18 +1102,18 @@ class ScholarQuerier(object):
         try:
             ScholarUtils.log('info', 'requesting %s' % unquote(url))
 
-            req = Request(url=url, headers={'User-Agent': ScholarConf.USER_AGENT})
-            hdl = self.opener.open(req)
-            html = hdl.read()
+            #req = Request(url=url, headers={'User-Agent': ScholarConf.USER_AGENT})
+            hdl = self.opener.get(url)
+            time.sleep(60)
+            html = self.opener.page_source.encode('utf-8')
 
             ScholarUtils.log('debug', log_msg)
             ScholarUtils.log('debug', '>>>>' + '-'*68)
-            ScholarUtils.log('debug', 'url: %s' % hdl.geturl())
-            ScholarUtils.log('debug', 'result: %s' % hdl.getcode())
-            ScholarUtils.log('debug', 'headers:\n' + str(hdl.info()))
-            ScholarUtils.log('debug', 'data:\n' + html.decode('utf-8')) # For Python 3
-            ScholarUtils.log('debug', '<<<<' + '-'*68)
-
+            #ScholarUtils.log('debug', 'url: %s' % hdl.geturl())
+            #ScholarUtils.log('debug', 'result: %s' % hdl.getcode())
+            #ScholarUtils.log('debug', 'headers:\n' + str(hdl.info()))
+            #ScholarUtils.log('debug', 'data:\n' + html.decode('utf-8')) # For Python 3
+            #ScholarUtils.log('debug', '<<<<' + '-'*68)
             return html
         except Exception as err:
             ScholarUtils.log('info', err_msg + ': %s' % err)
